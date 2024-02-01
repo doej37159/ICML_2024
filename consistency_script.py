@@ -1,122 +1,23 @@
-import math
-import matplotlib.pyplot as plt
-import time
-
-from matplotlib.lines import Line2D
-from random import randint, uniform
+from random import randint
 from typing import List
 
+from utils import compute_r0, compute_r1, compute_M_p, compute_r2, compute_r3, generate_equilibria_price_list, \
+    generate_random_price_list, compute_T, compute_OPT_t, plot_multi_lines
 
-def compute_T(b):
-    return randint(1, 4*b)
 
+def compute_T_hat(
+    T,
+    z
+):
+    """
+    :param T:
+    :param z:
+    :return:
+    """
 
-def compute_T_hat(T, z):
     eps = (2 * randint(0, 1) - 1) * z
     T_hat = max(T + eps, 1)
     return int(T_hat)
-
-
-def compute_r0(T_hat, price_list):
-    return price_list.index(min(price_list[:T_hat])) + 1 
-
-
-def compute_r1(price_list, M_p):    
-    Pr_r_list = [price_list[i]/(i+1) for i in range(0, M_p)]
-    Pr1_r1 = min(Pr_r_list)
-    r1 = Pr_r_list.index(Pr1_r1)
-    return r1 + 1
-
-
-def compute_M_p(price_list):
-    return min(price_list)
-
-
-def compute_OPT_t(t, M_p):
-    if t < M_p:
-        return t
-    else:
-        return M_p
-
-
-def compute_r2(price_list, lmbd, r0, r1, M_p):
-    r2_start = math.ceil((1 - lmbd) * (r0 - 1) + lmbd * r1) - 1
-    Pr2_OPTr2_list = [price_list[i] - compute_OPT_t(i+1, M_p) for i in range(r2_start,len(price_list))]
-    diff_Pr2_OPTr2_min = min(Pr2_OPTr2_list)
-    r2 = r2_start + Pr2_OPTr2_list.index(diff_Pr2_OPTr2_min)
-    Pr2 = price_list[r2]
-    if Pr2 > price_list[r1 - 1]:
-        print(f"changing {r2} for {r1}")
-        r2 = r1
-
-    return r2 + 1
-
-
-def compute_r3(price_list, lmbd, r1, M_p):
-    Pr1 = price_list[r1 - 1]
-    c_opt = Pr1/r1
-    Pr3_r3_min = math.inf
-    r3_min = -1
-    for p in range(0, len(price_list)):
-        # r3 is the current day
-        r3 = p + 1
-        opt_r3 = compute_OPT_t(r3, M_p)
-        Pr3 = price_list[p]
-        if (Pr3 / opt_r3) <= 1 + ((1 / lmbd) * (c_opt - 1)) and \
-            Pr3 / r3 < Pr3_r3_min:
-            # r3 will always be the first day for which the minimum ratio is achieved by using the < condition
-            Pr3_r3_min = Pr3 / r3
-            r3_min = r3
-    return r3_min
-
-
-def calculate_wr(r, b):
-    wi = 1
-    while (wi - 1) * min(b, r - 1 + wi) <= r*(b-1):
-        wi += 1
-    
-    wr = wi # randint(2,wi)
-    return wr
-
-
-def equilibria_generate_price_list(
-    b: int
-) -> List[int]:
-    """
-    :param int b: Max price
-    :return: Price list
-    """
-
-    price_list: List[int] = []
-    r = b
-    wr = calculate_wr(r, b)
-
-    for j in range(0, 4*b):
-        if j == r:
-            Pj = j + wr
-        else:
-            Pj = j + b
-        price_list.append(Pj)
-
-    return price_list
-
-
-def generate_random_price_list(
-    b: int,
-    z: float
-) -> List[int]:
-    """
-    :param int b: Max price
-    :param int z: standard deviation
-    :return: Price list
-    """
-
-    price_list: List[int] = []
-    psi = int(uniform(0, z*b))
-    for i in range(0, 4*b):
-        Pi = i + b - psi
-        price_list.append(Pi)
-    return price_list
 
 
 def multiagent_ski_rental(
@@ -157,52 +58,20 @@ def multiagent_ski_rental(
     return comp_ratio, ri2, Mp, c_opt
 
 
-def plot_multi_lines(
-    name,
-    data,
-    x_label,
-    y_label,
-    color_list,
-    legend_list
+def compute_alg_with_margins(
+    Experiments,
+    P,
+    trials,
+    B
 ):
+    """
+    :param Experiments:
+    :param P:
+    :param trials:
+    :param B:
+    :return:
+    """
 
-    fig = plt.figure(figsize=(7, 7))
-
-    # Plot Title
-    plt.title(f"Consistency of Equilibrium", pad=38)
-
-    # Plot labels
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-
-    # Plot Data
-    ymin = []
-    ymax = []
-    custom = []
-    for line in range(len(data)):
-        x_val = [x[0] for x in data[line]]
-        y_val = [x[1] for x in data[line]]
-        ymin.append(min(y_val))
-        ymax.append(max(y_val))
-        plt.plot(x_val, y_val, color=color_list[line])
-        custom.append(Line2D([], [], marker='.', markersize=10, color=color_list[line], linestyle='None'))
-
-    y_lim_min = min(ymin)
-    y_lim_max = max(ymax)
-
-    plt.grid()
-
-    # Plot Limits
-    ax = plt.gca()
-    ax.set_ylim([y_lim_min - 0.3, y_lim_max + 0.3])
-    
-    plt.legend(custom, legend_list, bbox_to_anchor=(0, 1.02, 1, 0.2), loc="lower left",
-               borderaxespad=0, ncol=5, fontsize=10, frameon=False)
-
-    fig.savefig(f"outputs/{name + time.strftime('%Y_%m_%d_%H_%M_%S')}")
-
-
-def computeAlg_with_margins_and_plot(Experiments, P, trials, B):
     results_comp_lst = [[] for i in range(Experiments)]
     results_relative_lst = [[] for i in range(Experiments)]
     
@@ -212,7 +81,7 @@ def computeAlg_with_margins_and_plot(Experiments, P, trials, B):
     
     for e in range(Experiments):
         if equilibria :
-            price_list = equilibria_generate_price_list(B)
+            price_list = generate_equilibria_price_list(B)
         else:
             price_list = generate_random_price_list(B, z=1)
         print(e)
@@ -260,7 +129,17 @@ def computeAlg_with_margins_and_plot(Experiments, P, trials, B):
                      legend_list= ['price' + str(i + 1) for i in range(Experiments)])
 
 
-def computeAlg_rel_comp_ratio_ws_margins_and_plot(P, trials, B):
+def compute_alg_rel_comp_ratio_ws_margins(
+    P,
+    trials,
+    B
+):
+    """
+    :param P:
+    :param trials:
+    :param B:
+    :return:
+    """
 
     legend_list = ['avg_consistency', 'avg_upperbound']
     results_lst = [[] for i in range(len(legend_list))]
@@ -269,10 +148,9 @@ def computeAlg_rel_comp_ratio_ws_margins_and_plot(P, trials, B):
     lmbd_range = len(lmbd_list)
 
     if equilibria:
-        price_list = equilibria_generate_price_list(B)
+        price_list = generate_equilibria_price_list(B)
     else:
         price_list = generate_random_price_list(B, z=0.1)
-    print(price_list) 
 
     for lmb in range(lmbd_range): 
         lmbd = lmbd_list[lmb]
@@ -310,14 +188,5 @@ if __name__ == "__main__":
     trials = 100
     B = 100
     P = 100
-
-    # Experiments = 10
-    # computeAlg_with_margins_and_plot(Experiments, P, trials, B)
     
-    computeAlg_rel_comp_ratio_ws_margins_and_plot(P, trials, B)
-
-
-
-
-
-
+    compute_alg_rel_comp_ratio_ws_margins(P, trials, B)
