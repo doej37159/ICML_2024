@@ -10,9 +10,11 @@ def compute_T_hat(
     z
 ):
     """
-    :param T:
-    :param z:
-    :return:
+    Computes T hat.
+
+    :param T: Number of skying days
+    :param z: Standard deviation
+    :return: T hat
     """
 
     eps = (2 * randint(0, 1) - 1) * z
@@ -65,11 +67,12 @@ def compute_alg_with_margins(
     B
 ):
     """
-    :param Experiments:
-    :param P:
-    :param trials:
-    :param B:
-    :return:
+
+    :param Experiments: Number of experiments
+    :param P: Quantization parameter
+    :param trials: Number of trials per experiment
+    :param B: Maximum price
+    :return: void
     """
 
     results_comp_lst = [[] for i in range(Experiments)]
@@ -135,10 +138,11 @@ def compute_alg_rel_comp_ratio_ws_margins(
     B
 ):
     """
-    :param P:
-    :param trials:
-    :param B:
-    :return:
+
+    :param P: Quantization parameter
+    :param trials: Number of trials
+    :param B: Maximum price
+    :return: void
     """
 
     legend_list = ['avg_consistency', 'avg_upperbound']
