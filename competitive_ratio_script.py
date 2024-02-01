@@ -1,8 +1,8 @@
-import numpy as np
+from random import randint
 from typing import List
 
 from utils import compute_r0, compute_r1, compute_M_p, compute_r2, compute_r3, generate_equilibria_price_list, \
-    generate_random_price_list, compute_T, compute_OPT_t, plot_multi_data
+    generate_random_price_list, compute_T, compute_OPT_t, plot_multi_lines
 
 
 def compute_T_hat(
@@ -10,12 +10,14 @@ def compute_T_hat(
     z
 ):
     """
-    :param T:
-    :param z:
-    :return:
+    Computes T hat.
+
+    :param T: Number of skying days
+    :param z: Standard deviation
+    :return: T hat
     """
 
-    eps = np.random.normal(0, z)
+    eps = (2 * randint(0, 1) - 1) * z
     T_hat = max(T + eps, 1)
     return int(T_hat)
 
@@ -30,7 +32,7 @@ def multiagent_ski_rental(
     :param int T: Total Ski Days
     :param int T_hat: Predicted Ski Days, T_hat
     :param float lmbd: Lambda
-    :param List[int] price_list: Price list
+    :param Listp[int] price_list: Price list
     :return: ri, Mp and c_opt
     """
 
@@ -42,98 +44,153 @@ def multiagent_ski_rental(
 
     if T_hat >= Mp:
         if r2 > T:
-            ri = -1
+            ri = T
         else:
-            ri = r2
+            ri = price_list[r2-1]
     else:
         if r3 > T:
-            ri = -1
+            ri = T
         else:
-            ri = r3
+            ri = price_list[r3-1]
+
+    ri2 = max(price_list[r2-1] / Mp, price_list[r3-1]/r3)
+    comp_ratio = ri / compute_OPT_t(ri, Mp)
     c_opt = price_list[r1-1] / r1
 
-    return ri, Mp, c_opt
+    return comp_ratio, ri2, Mp, c_opt
 
 
-def compute_alg(
+def compute_alg_with_margins(
+    Experiments,
     P,
     trials,
     B
 ):
     """
-    :param P:
-    :param trials:
-    :param B:
-    :return:
+
+    :param Experiments: Number of experiments
+    :param P: Quantization parameter
+    :param trials: Number of trials per experiment
+    :param B: Maximum price
+    :return: void
     """
 
-    lmbd_list = [1, 0.2]
+    results_comp_lst = [[] for i in range(Experiments)]
+    results_relative_lst = [[] for i in range(Experiments)]
+    
+    lmbd_list = [i/P for i in range(1, P + 1)]
     lmbd_range = len(lmbd_list)
-    zz_list = [1, 0.9, 0.5]
-
-    for zz in zz_list:
-        results_lmbd_lst = [[] for i in range(len(lmbd_list))]
-        results_ratio_lst = [[] for i in range(len(lmbd_list))]
-        print("z, comp_rat_l_1, comp_rat_l_0.2")
-        if equilibria:
+    print(lmbd_list)
+    
+    for e in range(Experiments):
+        if equilibria :
             price_list = generate_equilibria_price_list(B)
         else:
-            price_list = generate_random_price_list(B, zz)
-        print(price_list)
+            price_list = generate_random_price_list(B, z=1)
+        print(e)
+        print(price_list) 
 
-        for z in range(1, 250):
-            competitive_ratio_list = [0] * lmbd_range
-            relative_comp_ratio_list = [0] * lmbd_range
+        competitive_ratio_list = [0] * lmbd_range
+        relative_comp_ratio_list = [0] * lmbd_range
+        for lmb in range(lmbd_range): 
+            lmbd = lmbd_list[lmb]
+            competitive_ratio_sum = 0
+            relative_comp_ratio_sum = 0
 
-            for lmb in range(lmbd_range):
-                lmbd = lmbd_list[lmb]
-                competitive_ratio_sum = 0
-                competitive_ratio_max = 0
-                relative_comp_ratio_sum = 0
-                relative_comp_ratio_max = 0
-                center = compute_r1(price_list, compute_M_p(price_list))
+            for i in range(trials):
+                T=compute_T(B)
+                T_hat = T
+                ri, ri2, Mp, c_opt = multiagent_ski_rental(T, T_hat, lmbd, price_list)
 
-                for i in range(trials):
-                    T = compute_T(B)
-                    T_hat = compute_T_hat(T, z-1)
-                    ri, Mp, c_opt = multiagent_ski_rental(T, T_hat, lmbd, price_list)
-                    OPT = compute_OPT_t(T, Mp)
+                competitive_ratio = ri2
+                relative_comp_ratio = (competitive_ratio - 1)/(c_opt - 1)
 
-                    if ri < 0:
-                        CA = T
-                    else:
-                        CA = price_list[ri - 1]
+                competitive_ratio_sum += competitive_ratio
+                relative_comp_ratio_sum += relative_comp_ratio
 
-                    competitive_ratio = CA/OPT
-                    relative_comp_ratio = (competitive_ratio - 1)/(c_opt - 1)
+            competitive_ratio_avg = competitive_ratio_sum / trials
+            competitive_ratio_list[lmb] = competitive_ratio_avg
 
-                    competitive_ratio_sum += competitive_ratio
-                    relative_comp_ratio_sum += relative_comp_ratio
+            relative_comp_ratio_avg = relative_comp_ratio_sum / trials
+            relative_comp_ratio_list[lmb] = relative_comp_ratio_avg
+    
+            results_comp_lst[e].append((lmb,competitive_ratio_avg))
+            results_relative_lst[e].append((lmb,relative_comp_ratio_avg))            
+   
+    plot_multi_lines(f'competitive_ratio_equilibria_{equilibria}_B_{B}_trials_{trials}_lambda_{P}_eperiments_{Experiments}', \
+                     results_comp_lst,
+                     x_label="Lambda",
+                     y_label="Competitive Ratio",
+                     color_list= ['red', 'green', 'blue', 'black', 'orange', 'magenta', 'yellow', 'cyan', 'gray', 'brown'],
+                     legend_list= ['price' + str(i + 1) for i in range(Experiments)])
 
-                    competitive_ratio_avg = competitive_ratio_sum / trials
-                    competitive_ratio_list[lmb] = competitive_ratio_avg
+    plot_multi_lines(f'relative_competitive_ratio_equilibria_{equilibria}_B_{B}_trials_{trials}_lambda_{P}_eperiments_{Experiments}', \
+                     results_relative_lst,
+                     x_label="λ",
+                     y_label="Relative Competitive Ratio",
+                     color_list= ['red', 'green', 'blue', 'black', 'orange', 'magenta', 'yellow', 'cyan', 'gray', 'brown'],
+                     legend_list= ['price' + str(i + 1) for i in range(Experiments)])
 
-                    relative_comp_ratio_avg = relative_comp_ratio_sum / trials
-                    relative_comp_ratio_list[lmb] = relative_comp_ratio_avg
-            for i in range(lmbd_range):
-                results_lmbd_lst[i].append((z, competitive_ratio_list[i]))
 
-            for i in range(lmbd_range):
-                results_ratio_lst[i].append((z, relative_comp_ratio_list[i]))
+def compute_alg_rel_comp_ratio_ws_margins(
+    P,
+    trials,
+    B
+):
+    """
 
-            print(f"{z},{competitive_ratio_list[0]}, {competitive_ratio_list[1]}, ...")
+    :param P: Quantization parameter
+    :param trials: Number of trials
+    :param B: Maximum price
+    :return: void
+    """
 
-        plot_multi_data(f'competitive_ratio_equilibria_{equilibria}_B_{B}_trials_{trials}_qu_{P}_z_0_{int(zz*10)}_',\
-                        results_lmbd_lst,
-                        x_label="Standard Deviation σ",
-                        y_label="Competitive Ratio")
+    legend_list = ['avg_consistency', 'avg_upperbound']
+    results_lst = [[] for i in range(len(legend_list))]
+    
+    lmbd_list = [i/P for i in range(1, P + 1)]
+    lmbd_range = len(lmbd_list)
+
+    if equilibria:
+        price_list = generate_equilibria_price_list(B)
+    else:
+        price_list = generate_random_price_list(B, z=0.1)
+
+    for lmb in range(lmbd_range): 
+        lmbd = lmbd_list[lmb]
+        ratio_sum = [0 for i in range(len(legend_list))]
+
+        for i in range(trials):
+                                
+            T = compute_T(B)
+            T_hat = T
+            ri, ri2, Mp, c_opt = multiagent_ski_rental(T, T_hat, lmbd, price_list)
+            ratio_sum[0] += ri
+            ratio_sum[1] += ri2
+
+        ratio_avg = [r_sum / trials for r_sum in ratio_sum]
+        
+        for k in range(len(legend_list)):
+            str_ratio_avg = ', '+str(ratio_sum[k])
+        print(f"{lmb}{str_ratio_avg}")
+
+        for k in range(len(legend_list)):
+            results_lst[k].append((lmb, ratio_avg[k]))
+
+    plot_multi_lines(f'all_ratio_equilibria_{equilibria}_B_{B}_trials_{trials}_lambda_{P}_',
+                     results_lst,
+                     x_label="Parameter λ",
+                     y_label="Competitive Ratio",
+                     color_list=['red', 'blue'],
+                     legend_list=legend_list)
+
 
 if __name__ == "__main__":
-    equilibria = False
+    equilibria = True
     random = False
 
-    P = 250
-    trials = 1000
+    trials = 100
     B = 100
-
-    compute_alg(P, trials, B)
+    P = 100
+    
+    compute_alg_rel_comp_ratio_ws_margins(P, trials, B)
