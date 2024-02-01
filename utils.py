@@ -1,6 +1,6 @@
 import math
+import time
 
-from datetime import time
 from random import randint, uniform
 from typing import List
 from matplotlib import pyplot as plt
@@ -160,12 +160,12 @@ def compute_r2(
     """
     Computes r2
     
-    :param price_list: 
-    :param lmbd: 
-    :param r0: 
-    :param r1: 
-    :param M_p: 
-    :return: 
+    :param price_list: Price list
+    :param lmbd: Lambda
+    :param r0: r0
+    :param r1: r1
+    :param M_p: Minimum price
+    :return: r2
     """
     
     r2_start = math.ceil((1 - lmbd) * (r0 - 1) + lmbd * r1) - 1
@@ -188,11 +188,13 @@ def compute_r3(
     M_p
 ):
     """
-    :param price_list: 
-    :param lmbd: 
-    :param r1: 
-    :param M_p: 
-    :return: 
+    Computes r3
+
+    :param price_list: Price list
+    :param lmbd: Lambda
+    :param r1: r1
+    :param M_p: Minimum price
+    :return: r3
     """
     
     Pr1 = price_list[r1 - 1]
@@ -225,11 +227,12 @@ def plot_multi_data(
     y_label='Competitive Ratio'
 ):
     """
-    :param name: 
-    :param data: 
-    :param x_label: 
-    :param y_label: 
-    :return: 
+
+    :param name: Name of the plot
+    :param data: Plot data
+    :param x_label: Label for x axis
+    :param y_label: Label for y axis
+    :return: void
     """
     
     fig = plt.figure(figsize=(7, 7))
@@ -276,13 +279,14 @@ def plot_multi_lines(
     legend_list
 ):
     """
-    :param name: 
-    :param data: 
-    :param x_label: 
-    :param y_label: 
-    :param color_list: 
-    :param legend_list: 
-    :return: 
+
+    :param name: Name of the plot
+    :param data: Plot data
+    :param x_label: Label for x axis
+    :param y_label: Label for y axis
+    :param color_list:  Plot color list
+    :param legend_list: Plot legend list
+    :return: void
     """
     
     fig = plt.figure(figsize=(7, 7))
