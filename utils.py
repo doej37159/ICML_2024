@@ -267,7 +267,7 @@ def plot_multi_data(
                borderaxespad=0, ncol=2, fontsize=10, frameon=False)
 
     # Save Plot
-    fig.savefig(f"outputs/{name + time.strftime('%Y_%m_%d_%H_%M_%S')}")
+    fig.savefig(f"{name + time.strftime('%Y_%m_%d_%H_%M_%S')}")
 
 
 def plot_multi_lines(
@@ -322,4 +322,4 @@ def plot_multi_lines(
     plt.legend(custom, legend_list, bbox_to_anchor=(0, 1.02, 1, 0.2), loc="lower left",
                borderaxespad=0, ncol=5, fontsize=10, frameon=False)
 
-    fig.savefig(f"outputs/{name + time.strftime('%Y_%m_%d_%H_%M_%S')}")
+    fig.savefig(f"{name + time.strftime('%Y_%m_%d_%H_%M_%S')}")
